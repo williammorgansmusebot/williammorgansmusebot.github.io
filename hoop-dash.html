@@ -212,6 +212,16 @@ canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; 
 .board-row .bl{flex:0 0 auto; font-family:"Baloo 2",sans-serif; font-weight:800}
 .board-row .bl small{font-family:"Nunito",sans-serif; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; opacity:.65; font-weight:800; margin-left:4px}
 .board-msg{margin:0; padding:8px 2px; font-weight:800; font-size:14px; opacity:.85; text-align:center}
+/* ---------- Willis Challenges list ---------- */
+.chal-row{display:flex; align-items:center; gap:10px; padding:7px 2px; border-bottom:1px dashed rgba(255,243,223,.22)}
+.chal-row:last-child{border-bottom:none}
+.chal-row .ci{flex:1 1 auto; min-width:0}
+.chal-row .ci b{display:block; font-size:15px; line-height:1.2}
+.chal-row .ci span{display:block; font-size:12.5px; opacity:.78; font-weight:700; line-height:1.3}
+.chal-row .rw{flex:0 0 auto; font-family:"Baloo 2",sans-serif; font-weight:800; color:var(--gold); white-space:nowrap; font-size:14.5px}
+.chal-row .st{flex:0 0 auto; font-weight:900; font-size:12.5px; white-space:nowrap; min-width:44px; text-align:right}
+.chal-row.done .st{color:#9be29b}
+.chal-row.locked{opacity:.55}
 .audiobox{margin-top:12px; border-top:2px dashed rgba(255,243,223,.35); padding-top:11px; display:flex; align-items:center; justify-content:center; gap:6px 20px; flex-wrap:nowrap}
 .audiobox .ttl{font-weight:900; font-size:12px; letter-spacing:.09em; text-transform:uppercase; opacity:.75; margin:0; flex:0 0 auto}
 .togglerow{display:flex; align-items:center; gap:8px; padding:0; flex:0 0 auto}
@@ -228,6 +238,14 @@ canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; 
 .switch.on .st.on-t{opacity:1}.switch.on .st.off-t{opacity:0}
 .switch::after{content:''; position:absolute; inset:-7px -5px} /* 44px+ thumb target, visuals unchanged */
 .centerScr{justify-content:center; background:repeating-linear-gradient(90deg, rgba(43,22,8,.30) 0 2px, rgba(0,0,0,0) 2px 118px), linear-gradient(180deg,#7c4c22 0%, #5f3717 60%, #4a2a10 100%)}
+/* game-over screen: the panel (stats + buttons + Balls board + Gem board)
+   is taller than most viewports, so plain flex centring in a scrolling
+   overlay can push part of it outside the reachable scroll area. Auto
+   vertical margins centre the panel only while there is spare room and
+   fall back to a fully scrollable top-aligned layout when it overflows,
+   keeping both boards reachable on phone and desktop. */
+#overScr{justify-content:flex-start}
+#overScr .panel{margin-top:auto; margin-bottom:auto; flex:0 0 auto}
 .statgrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin:10px 0 14px}
 .stat{border:3px solid var(--ink); border-radius:14px; padding:8px 6px; text-align:center; background:#3f2312; color:var(--cream)}
 @media (prefers-color-scheme: dark){ .stat{background:#3f2312} }
@@ -365,6 +383,17 @@ canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; 
       <p class="board-sub">Top 10 players worldwide, ranked by Balls collected in a single run.</p>
       <div class="board-list" id="boardTitleList"><p class="board-msg">Loading global board…</p></div>
     </div>
+    <div class="panel board-panel">
+      <h2>💎 Willis Challenges</h2>
+      <p class="board-sub">Finish a challenge to earn gems — gems set your place on the Global Gem Board. Each challenge pays out once.</p>
+      <p style="margin:0 0 4px; font-weight:900; font-size:16px">Your gems: <span id="chalGems" style="color:var(--gold)">0</span> 💎</p>
+      <div id="challengeList"></div>
+    </div>
+    <div class="panel board-panel">
+      <h2>💎 Global Gem Board</h2>
+      <p class="board-sub">Top 10 players worldwide, ranked by total gems earned from Willis Challenges.</p>
+      <div class="board-list" id="boardGemTitleList"><p class="board-msg">Loading gem board…</p></div>
+    </div>
   </div>
 
   <!-- PAUSE -->
@@ -395,7 +424,9 @@ canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; 
         <div class="stat"><b id="ovDist">0m</b><small>Distance</small></div>
       </div>
       <div class="newbest" id="ovNewBest">★ New best score! ★</div>
-      <p style="margin:0 0 12px; font-weight:900; text-align:center">Best score: <span id="ovBest">0</span></p>
+      <p style="margin:0 0 6px; font-weight:900; text-align:center">Best score: <span id="ovBest">0</span></p>
+      <p style="margin:0 0 6px; font-weight:900; text-align:center" id="ovGems">💎 0 gems</p>
+      <p style="margin:0 0 12px; font-weight:800; text-align:center; color:var(--gold)" id="ovChalDone"></p>
       <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center">
         <button class="bigbtn" id="btnAgain" style="font-size:21px; padding:11px 30px">▶ Play Again</button>
         <button class="ghostbtn" id="btnQuitOver">Title</button>
@@ -404,6 +435,11 @@ canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; 
         <h3>🌍 Global Balls Board</h3>
         <p class="board-sub">Top 10 players worldwide, ranked by Balls collected in a single run.</p>
         <div class="board-list" id="boardOverList"><p class="board-msg">Loading global board…</p></div>
+      </div>
+      <div class="board-wrap">
+        <h3>💎 Global Gem Board</h3>
+        <p class="board-sub">Top 10 players worldwide, ranked by total gems earned from Willis Challenges.</p>
+        <div class="board-list" id="boardGemOverList"><p class="board-msg">Loading gem board…</p></div>
       </div>
     </div>
   </div>
@@ -529,6 +565,152 @@ function submitGlobalScore(){
   fbDb.collection('hoop_scores').add(payload)
     .then(function(){ refreshGlobalBoard(); })
     .catch(function(){ boardUnavailable=true; renderBoards(); });
+}
+
+/* ================= WILLIS CHALLENGES + GLOBAL GEM BOARD =================
+   Willis's idea: finish challenges (collect set amounts of balls /
+   golden balls, dodge defenders and Bevo, jump benches, slide banners,
+   magnet hauls, distance) to earn one-time gem rewards; the Golden
+   Touch chain unlocks step by step, everything else is open from the
+   start. Gems persist locally under the hoop_ prefix and are posted to
+   a separate Firestore collection, hoop_gems, as {name, gems, balls}
+   (balls = the run's Balls total, a tiebreaker) — only after a run in
+   which the gem total actually increased, exactly once per run. The
+   existing hoop_scores Balls board is untouched. Like the Balls board,
+   this is a bonus layer: any Firebase failure just shows "Gem board
+   unavailable" and the game plays on; starting a run never waits on it. */
+var CHALLENGES=[
+  { id:'first_basket', name:'First Basket',        desc:'Collect 10 basketballs in one run',                          target:10,   gems:1 },
+  { id:'golden1',      name:'Golden Touch I',      desc:'Collect 3 golden basketballs in one run',                    target:3,    gems:2 },
+  { id:'clean_court',  name:'Clean Court',         desc:'Dodge 5 defenders in one run without a foul',                target:5,    gems:2 },
+  { id:'bench_hopper', name:'Bench Hopper',        desc:'Jump 10 benches or water coolers in one run',                target:10,   gems:3 },
+  { id:'banner_limbo', name:'Banner Limbo',        desc:'Slide under 5 UT banners in one run',                        target:5,    gems:3 },
+  { id:'magnet_haul',  name:'Magnet Haul',         desc:'Collect 15 balls while the Ball Magnet is active',           target:15,   gems:4 },
+  { id:'hot_streak',   name:'Hot Streak',          desc:'Collect 100 basketballs in one run',                         target:100,  gems:4 },
+  { id:'golden2',      name:'Golden Touch II',     desc:'Collect 6 golden basketballs in one run',                    target:6,    gems:3, req:'golden1' },
+  { id:'bevo_dodge',   name:'Bevo Dodge',          desc:'Dodge Bevo 3 times (counted across runs)',                   target:3,    gems:5 },
+  { id:'golden3',      name:'Golden Touch III — Golden Run', desc:'Collect 10 golden basketballs in one run',         target:10,   gems:5, req:'golden2' },
+  { id:'marathon',     name:'Marathon',            desc:'Run 1000m without a foul',                                   target:1000, gems:5 }
+];
+var totalGems=parseInt(lsGet('hoop_gems','0'),10)||0;
+var completedChallenges={};
+try{
+  var ccSaved=JSON.parse(lsGet('hoop_challenges','[]'));
+  if(Array.isArray(ccSaved)) ccSaved.forEach(function(id){ completedChallenges[id]=true; });
+}catch(e){ completedChallenges={}; }
+var bevoDodgesTotal=parseInt(lsGet('hoop_bevoDodges','0'),10)||0;
+function saveChalState(){
+  lsSet('hoop_gems',String(totalGems));
+  lsSet('hoop_challenges',JSON.stringify(Object.keys(completedChallenges)));
+  lsSet('hoop_bevoDodges',String(bevoDodgesTotal));
+}
+/* per-run counters, reset in startRun; bevo dodges are cumulative */
+var runStats={balls:0, gold:0, def:0, jumps:0, banners:0, magnet:0};
+var gemsGainedThisRun=0, gemSubmitted=false;
+var runChallengesDone=[]; /* challenge defs completed during the current run */
+function chalProgress(ch){
+  switch(ch.id){
+    case 'first_basket': case 'hot_streak': return runStats.balls;
+    case 'golden1': case 'golden2': case 'golden3': return runStats.gold;
+    case 'clean_court': return runStats.def;
+    case 'bench_hopper': return runStats.jumps;
+    case 'banner_limbo': return runStats.banners;
+    case 'magnet_haul': return runStats.magnet;
+    case 'bevo_dodge': return bevoDodgesTotal;
+    case 'marathon': return Math.floor(distanceM);
+    default: return 0;
+  }
+}
+function chalUnlocked(ch){ return !ch.req || !!completedChallenges[ch.req]; }
+function completeChallenge(ch){
+  completedChallenges[ch.id]=true;
+  totalGems+=ch.gems; gemsGainedThisRun+=ch.gems;
+  runChallengesDone.push(ch);
+  saveChalState();
+  sfx('gold');
+  toast('🏆 Challenge complete: '+ch.name+' — +'+ch.gems+' 💎','#ffd23e');
+  renderChallenges();
+}
+function checkChallenges(){
+  CHALLENGES.forEach(function(ch){
+    if(completedChallenges[ch.id] || !chalUnlocked(ch)) return;
+    if(chalProgress(ch)>=ch.target) completeChallenge(ch);
+  });
+}
+function renderChallenges(){
+  var gemsEl=document.getElementById('chalGems');
+  if(gemsEl) gemsEl.textContent=String(totalGems);
+  var list=document.getElementById('challengeList');
+  if(!list) return;
+  while(list.firstChild) list.removeChild(list.firstChild);
+  CHALLENGES.forEach(function(ch){
+    var done=!!completedChallenges[ch.id], unlocked=chalUnlocked(ch);
+    var row=document.createElement('div');
+    row.className='chal-row'+(done?' done':'')+(!unlocked?' locked':'');
+    var ci=document.createElement('div'); ci.className='ci';
+    var b=document.createElement('b'); b.textContent=ch.name;
+    var sp=document.createElement('span'); sp.textContent=ch.desc;
+    ci.appendChild(b); ci.appendChild(sp);
+    var rw=document.createElement('span'); rw.className='rw'; rw.textContent='+'+ch.gems+' 💎';
+    var st=document.createElement('span'); st.className='st';
+    if(done) st.textContent='✓ Done';
+    else if(!unlocked) st.textContent='🔒 Locked';
+    else st.textContent=Math.min(chalProgress(ch),ch.target)+' / '+ch.target;
+    row.appendChild(ci); row.appendChild(rw); row.appendChild(st);
+    list.appendChild(row);
+  });
+}
+/* ---- Global Gem Board (Firestore collection hoop_gems) ---- */
+var gemEntries=null;      /* null = nothing loaded yet */
+var gemUnavailable=false; /* last fetch/submit failed */
+function renderGemBoardInto(el,entries,unavailable){
+  if(!el) return;
+  while(el.firstChild) el.removeChild(el.firstChild);
+  function msg(txt){ var p=document.createElement('p'); p.className='board-msg'; p.textContent=txt; el.appendChild(p); }
+  if(unavailable){ msg('Gem board unavailable'); return; }
+  if(!entries){ msg('Loading gem board…'); return; }
+  if(!entries.length){ msg('No gem scores yet — complete a Willis Challenge to be first!'); return; }
+  entries.forEach(function(en,i){
+    var row=document.createElement('div'); row.className='board-row';
+    var rk=document.createElement('span'); rk.className='rk'; rk.textContent='#'+(i+1);
+    var nm=document.createElement('span'); nm.className='nm'; nm.textContent=en.name;
+    var bl=document.createElement('span'); bl.className='bl'; bl.textContent=String(en.gems);
+    var unit=document.createElement('small'); unit.textContent='Gems'; bl.appendChild(unit);
+    row.appendChild(rk); row.appendChild(nm); row.appendChild(bl);
+    el.appendChild(row);
+  });
+}
+function renderGemBoards(){
+  renderGemBoardInto(document.getElementById('boardGemTitleList'),gemEntries,gemUnavailable);
+  renderGemBoardInto(document.getElementById('boardGemOverList'),gemEntries,gemUnavailable);
+}
+function refreshGemBoard(){
+  if(!fbDb){ gemUnavailable=true; renderGemBoards(); return; }
+  if(!gemEntries && !gemUnavailable) renderGemBoards(); /* loading state */
+  fbDb.collection('hoop_gems').orderBy('gems','desc').limit(10).get()
+    .then(function(snap){
+      var list=[];
+      snap.forEach(function(doc){
+        var d=doc.data()||{};
+        var nm=(typeof d.name==='string' && d.name.trim()) ? d.name.trim().slice(0,50) : 'Player';
+        var gm=(typeof d.gems==='number' && isFinite(d.gems) && d.gems>=0) ? d.gems : 0;
+        list.push({name:nm, gems:gm});
+      });
+      gemEntries=list; gemUnavailable=false; renderGemBoards();
+    })
+    .catch(function(){ gemUnavailable=true; renderGemBoards(); });
+}
+function submitGemScore(){
+  /* called once per run from endRun, next to the Balls submission;
+     only runs in which the gem total increased post a gem entry */
+  if(gemSubmitted) return;
+  gemSubmitted=true;
+  if(!(gemsGainedThisRun>0)) return;
+  if(!fbDb){ gemUnavailable=true; renderGemBoards(); return; }
+  var payload={ name: currentPlayerName(), gems: totalGems, balls: (typeof ballsCount==='number')?ballsCount:0 };
+  fbDb.collection('hoop_gems').add(payload)
+    .then(function(){ refreshGemBoard(); })
+    .catch(function(){ gemUnavailable=true; renderGemBoards(); });
 }
 
 /* ================= AUDIO (separate music / SFX, 120Hz high-pass, notes >= ~130Hz) ================= */
@@ -1509,6 +1691,8 @@ function show(id,on){ document.getElementById(id).classList.toggle('on',!!on); }
 function startRun(){
   audioInit(); musicStart();
   globalSubmitted=false; /* new run: eligible for one global submission */
+  gemSubmitted=false; gemsGainedThisRun=0; runChallengesDone=[];
+  runStats={balls:0, gold:0, def:0, jumps:0, banners:0, magnet:0};
   score=0; ballsCount=0; pendingBalls=0; distanceM=0; elapsed=0; courtOff=0;
   entities=[]; flushFlyers(); particles=[];
   player={ lane:0, laneF:0, jumpY:0, jumpV:0, sliding:0, runPhase:0, invuln:0 };
@@ -1528,6 +1712,7 @@ function startRun(){
 }
 function endRun(reason){
   state='foul'; foulReason=reason;
+  checkChallenges(); /* catch any threshold crossed on this final frame, before the gem submission below */
   flushFlyers();
   sfx('whistle');
   document.getElementById('foulSub').textContent=reason;
@@ -1543,6 +1728,7 @@ function endRun(reason){
      any balls still in flight). Fire-and-forget — a Firebase failure
      must never delay or block the game-over screen. */
   submitGlobalScore();
+  submitGemScore(); /* Willis Challenges: posts total gems only if this run earned any */
   setTimeout(function(){
     document.getElementById('foulFx').classList.remove('on');
     state='over'; musicStop();
@@ -1551,9 +1737,22 @@ function endRun(reason){
     document.getElementById('ovDist').textContent=Math.floor(distanceM)+'m';
     document.getElementById('ovBest').textContent=best;
     document.getElementById('ovNewBest').classList.toggle('on',isBest);
+    document.getElementById('ovGems').textContent='💎 '+totalGems+' gems total'+(gemsGainedThisRun>0 ? ' (+'+gemsGainedThisRun+' earned this run)' : '');
+    document.getElementById('ovChalDone').textContent = runChallengesDone.length
+      ? '🏆 Completed: '+runChallengesDone.map(function(c){ return c.name+' (+'+c.gems+' 💎)'; }).join(' · ')
+      : '';
+    renderBoards();
+    renderGemBoards();
     document.getElementById('overReason').textContent=reason+'.';
     document.getElementById('titleBest').textContent='Best score: '+best;
     show('overScr',true);
+    document.getElementById('overScr').scrollTop=0;
+    /* end screen shown: always re-fetch BOTH global boards so the Balls
+       board and the Gem board display fresh top-10 standings here (not
+       just on the title screen), on top of the post-submission refresh
+       already fired by submitGlobalScore / submitGemScore above. */
+    refreshGlobalBoard();
+    refreshGemBoard();
     document.getElementById('touchBtns').classList.remove('on');
   },1350);
 }
@@ -1574,6 +1773,8 @@ function quitToTitle(){
   document.getElementById('touchBtns').classList.remove('on');
   document.getElementById('titleBest').textContent='Best score: '+best;
   refreshGlobalBoard(); /* title screen shown: refresh the global board */
+  refreshGemBoard();
+  renderChallenges();
 }
 /* browsers block audio before a first gesture: start the title music on the
    first tap anywhere on the title screen (TIP OFF also starts it via startRun) */
@@ -1645,6 +1846,7 @@ bindBtn('tbLeft',moveLeft); bindBtn('tbRight',moveRight); bindBtn('tbJump',doJum
 /* ================= UPDATE ================= */
 function collectBall(e,sc){
   var gold=e.kind==='gold';
+  runStats.balls++; if(gold) runStats.gold++; if(perks.magnet>0) runStats.magnet++;
   var pts=(gold?50:10)*(perks.boost>0?2:1);
   score+=pts;
   spawnFlyer(sc.x, sc.y-30*sc.s, gold, true);
@@ -1716,12 +1918,25 @@ function update(dt){
         if(sameLane && player.jumpY<42) foul(e, "You ran straight into Bevo's steaming poop");
       } else if(e.kind==='bench'||e.kind==='cooler'){
         if(sameLane && player.jumpY<42) foul(e, e.kind==='bench'?'You tripped clean over the team bench':'You crashed straight into the water cooler');
+        else if(sameLane) e.jumpedOver=true; /* cleared it in this lane — counted as a jump at the pass latch */
       } else if(e.kind==='banner'){
         if(player.sliding<=0 && player.jumpY<40) foul(e,'You forgot to duck under the banner');
+        if(player.sliding>0) e.slidUnder=true; /* ducked under it — counted at the pass latch */
       }
       if(state!=='playing'){ updateHUD(); return; }
     }
-    if(e.z<playerZ-3.4) e.passed=true; /* pass latch: behind you = never hittable again */
+    if(!e.passed && e.z<playerZ-3.4){
+      e.passed=true; /* pass latch: behind you = never hittable again */
+      /* Willis Challenges pass counters: the entity got past the player
+         without ending the run (a shield-blocked crash sets e.dead and
+         does not count as a dodge/jump/slide) */
+      if(!e.dead){
+        if(e.kind==='defender') runStats.def++;
+        else if(e.kind==='bevo'){ bevoDodgesTotal++; saveChalState(); }
+        else if((e.kind==='bench'||e.kind==='cooler') && e.jumpedOver) runStats.jumps++;
+        else if(e.kind==='banner' && e.slidUnder) runStats.banners++;
+      }
+    }
     /* fast cleanup: project() clamps at z<=0, which is the end of an entity's
        travel (its base sits on the bottom edge) — remove ground entities the
        instant they get there so nothing lingers frozen at full scale behind
@@ -1731,6 +1946,7 @@ function update(dt){
        latch above already made it non-collidable, so this is visual only). */
     if(e.dead || (e.kind==='banner' ? e.z<=-8 : e.z<=0)) entities.splice(i,1);
   }
+  checkChallenges(); /* balls/gold/dodge/jump/slide/magnet/distance thresholds */
   updateHUD();
 }
 
@@ -1766,6 +1982,9 @@ document.getElementById('hudBest').textContent=best;
 syncAudioUI();
 renderBoards();
 refreshGlobalBoard(); /* title screen is shown on load: load the board */
+renderGemBoards();
+refreshGemBoard();
+renderChallenges();
 requestAnimationFrame(frame);
 </script>
 </body>
